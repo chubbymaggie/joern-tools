@@ -1,33 +1,34 @@
-Gremlin.defineStep('forwardSlice', [Vertex, Pipe], { symbols ->
-	 MAX_LOOPS = 5;
+Gremlin.defineStep('forwardSlice', [Vertex, Pipe], { symbols,
+		     ORDER = 5, edgeTypes = ['REACHES', 'CONTROLS'] ->
   	_()
 	.copySplit(
-		_(),
-		_().transform{
-			it.sideEffect{first = true;}
-			.outE('REACHES', 'CONTROLS')
-			.filter{it.label == 'CONTROLS' || !first || it.var in symbols}
-			.inV().gather{it}.scatter()
-			.sideEffect{first = false}
-			.loop(4){it.loops < MAX_LOOPS}{true}
+	  	_(),
+	  	_().sideEffect{first = true;}.as('x')
+		.transform{
+			  it.outE(*edgeTypes)
+			  .filter{it.label == 'CONTROLS' || !first || it.var in symbols}
+			  .inV().gather{it}.scatter()
+			  .sideEffect{first = false}
 		}.scatter()
+		.loop('x'){it.loops <= ORDER}{true}
 	).fairMerge()
 	.dedup()
 });
 
-Gremlin.defineStep('backwardSlice', [Vertex, Pipe], { symbols ->
-	MAX_LOOPS = 5;
+Gremlin.defineStep('backwardSlice', [Vertex, Pipe], { symbols,
+		     ORDER = 5, edgeTypes = ['REACHES', 'CONTROLS'] ->
 	_()
 	.copySplit(
 		_(),
-		_().transform{
-			it.sideEffect{first = true;}
-			.inE('REACHES', 'CONTROLS')
+		_()
+		.sideEffect{first = true;}.as('x')
+		.transform{
+			it.inE(*edgeTypes)
 			.filter{it.label == 'CONTROLS' || !first || it.var in symbols}
 			.outV().gather{it}.scatter()
 			.sideEffect{first = false}
-			.loop(4){it.loops < MAX_LOOPS}{true}
 		}.scatter()
+		.loop('x'){it.loops <= ORDER}{true}
 	).fairMerge()
 	.dedup()
 });
@@ -37,10 +38,10 @@ Gremlin.defineStep('backwardSlice', [Vertex, Pipe], { symbols ->
    consider only the symbols actually used in the argument.
 */
 
-Gremlin.defineStep('sliceBackFromArgument', [Vertex, Pipe], {
+Gremlin.defineStep('sliceBackFromArgument', [Vertex, Pipe], { ORDER = 5, edgeTypes = ['REACHES', 'CONTROLS'] ->
 	_().transform{
 		symbols = it.uses().code.toList();
-		it.statements().backwardSlice(symbols)
+		it.statements().backwardSlice(symbols, ORDER, edgeTypes)
 	}.scatter()
 })
 
@@ -49,10 +50,10 @@ Gremlin.defineStep('sliceBackFromArgument', [Vertex, Pipe], {
    consider only the symbols actually used in the argument.
 */
 
-Gremlin.defineStep('sliceForwardFromArgument', [Vertex, Pipe], {
+Gremlin.defineStep('sliceForwardFromArgument', [Vertex, Pipe], { ORDER = 5, edgeTypes = ['REACHES', 'CONTROLS'] ->
 	_().transform{
 		symbols = it.uses().code.toList();
-		it.statements().forwardSlice(symbols)
+		it.statements().forwardSlice(symbols, ORDER, edgeTypes)
 	}.scatter()
 })
 
@@ -61,12 +62,12 @@ Gremlin.defineStep('sliceForwardFromArgument', [Vertex, Pipe], {
    symbols defined on the left-hand side of the assignment.
 */
 
-Gremlin.defineStep('sliceForwardFromAssign', [Vertex, Pipe], {
+Gremlin.defineStep('sliceForwardFromAssign', [Vertex, Pipe], { ORDER = 5, edgeTypes = ['REACHES', 'CONTROLS'] ->
 	_()
 	.transform
 	{
       		callee = it.code;
       		symbols = it.lval().code.toList()
-		it.statements().forwardSlice(symbols)
+		it.statements().forwardSlice(symbols, ORDER, edgeTypes)
 	}.scatter()
 })

@@ -2,14 +2,15 @@
 
 from joerntools.shelltool.CmdLineTool import CmdLineTool
 from joerntools.mlutils.EmbeddingLoader import EmbeddingLoader
+from scipy.spatial.distance import squareform
 
 DESCRIPTION = """ Perform linkage clustering for embedded vectors """
 
 DEFAULT_DIRNAME = 'embedding'
 
-METRIC = 'euclidean'
-MAX_DIST_IN_CLUSTER = 5.0
-METHOD = 'complete'
+METRIC = 'cityblock'
+MAX_DIST_IN_CLUSTER = 2.0
+METHOD = 'average'
 
 class JoernCluster(CmdLineTool):
     
@@ -30,13 +31,30 @@ class JoernCluster(CmdLineTool):
         # Btw, we can have the loader do PCA here by passing
         # a second argument.
         self.emb = loader.load(self.args.dirname)
+        if self.emb == None:
+            return
+        
         
         D = pairwise_distances(self.emb.x, metric=METRIC)
-        Z = linkage(D, method=METHOD)
-
+        D = squareform(D, checks=False)
+        # import numpy
+        # numpy.clip(D,0,1,D)
+        
+        try:
+            Z = linkage(D, method=METHOD)
+        except:
+            # If clustering fails, just put
+            # each datapoint into its own cluster.
+            for i in range(len(self.emb.y)):
+                label = long(self.emb.y[i])
+                nodeId = self.emb.TOCLines[label]
+                print str(nodeId) + '\t' + str(i + 1)
+            return
+        
         i = 0
         for x in fcluster(Z, MAX_DIST_IN_CLUSTER, criterion = 'distance'):
-            nodeId = int(self.emb.TOC[int(self.emb.y[i])])
+            label = long(self.emb.y[i])
+            nodeId = self.emb.TOCLines[label]
             # nodeId '\t clusterId
             print str(nodeId) + '\t' + str(x)
             i += 1

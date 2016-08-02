@@ -1,5 +1,5 @@
 
-import os
+import os, sys
 
 class MLDataDir:
     
@@ -11,12 +11,17 @@ class MLDataDir:
         
         self.dataDir = os.path.join(directory, 'data') 
         self.tocFilename = os.path.join(directory, 'TOC') 
-        os.makedirs(self.dataDir)
+        
+        try:
+            os.makedirs(self.dataDir)
+        except OSError:
+            sys.stderr.write("Warning: Embedding directory already exists. Overwriting.\n")
+        
         self.toc = file(self.tocFilename, 'w')
 
     def addDataPoint(self, funcId, symbols):
         
-        self.toc.write("%d\n" % (funcId))
+        self.toc.write("%s\n" % (funcId))
 
         datapointFilename = os.path.join(self.dataDir, str(self.curDatapoint))
         f = file(datapointFilename, 'w')

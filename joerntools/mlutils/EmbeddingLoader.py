@@ -20,7 +20,11 @@ class EmbeddingLoader:
         """
         
         self.dirname = dirname
-        self.emb.x, self.emb.y = load_svmlight_file(dirname + EMBEDDING_FILENAME)
+        
+        try:
+            self.emb.x, self.emb.y = load_svmlight_file(dirname + EMBEDDING_FILENAME)
+        except (ValueError, IOError):
+            return None
         
         if svd_k != 0:
             try:
@@ -71,6 +75,7 @@ class EmbeddingLoader:
         filename = self.dirname + TOC_FILENAME
         f = file(filename)
         TOCLines = [x.rstrip() for x in f.readlines()]
+        self.emb.TOCLines = TOCLines
         f.close()
         
         for i in range(len(self.emb.y)):

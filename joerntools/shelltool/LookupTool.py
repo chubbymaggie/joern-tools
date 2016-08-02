@@ -82,6 +82,7 @@ class LookupTool(TraversalTool):
             keys = self.args.attributes
             keyValPairs = [(keys[i] + ':' + str(node[i])) for i in range(len(keys))]
         else:
+            node = node.properties
             keys = [k for k in node]
             keyValPairs = [str(k) + ':' + str(node[k]) for k in keys]
             keyValPairs.sort()
